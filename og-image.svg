@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0f1c"/>
+      <stop offset="50%" style="stop-color:#111827"/>
+      <stop offset="100%" style="stop-color:#0a0f1c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#b8860b"/>
+      <stop offset="50%" style="stop-color:#d4af37"/>
+      <stop offset="100%" style="stop-color:#b8860b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1120" height="550" rx="20" fill="none" stroke="url(#gold)" stroke-width="2" opacity="0.4"/>
+  <rect x="50" y="50" width="1100" height="530" rx="16" fill="none" stroke="url(#gold)" stroke-width="1" opacity="0.2"/>
+  <!-- Decorative circles -->
+  <circle cx="600" cy="200" r="80" fill="none" stroke="#d4af37" stroke-width="1.5" opacity="0.3"/>
+  <circle cx="600" cy="200" r="60" fill="none" stroke="#d4af37" stroke-width="1" opacity="0.2"/>
+  <!-- Mosque icon -->
+  <text x="600" y="220" text-anchor="middle" font-size="72" fill="#d4af37">🕌</text>
+  <!-- Title -->
+  <text x="600" y="330" text-anchor="middle" font-family="serif" font-size="56" fill="#d4af37" font-weight="bold">القرآن الكريم</text>
+  <text x="600" y="390" text-anchor="middle" font-family="sans-serif" font-size="36" fill="#e2e8f0" font-weight="600">Al-Quran Al-Kareem</text>
+  <!-- Subtitle -->
+  <text x="600" y="450" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#94a3b8">Arabic Text • Bangla &amp; English Translation • Audio Recitation</text>
+  <text x="600" y="485" text-anchor="middle" font-family="sans-serif" font-size="20" fill="#94a3b8">Prayer Times • Tasbih • Duas • 20+ Islamic Tools</text>
+  <!-- Author -->
+  <text x="600" y="545" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#64748b">Built by Wassi</text>
+  <!-- Corner ornaments -->
+  <path d="M60,60 Q90,60 90,90" fill="none" stroke="#d4af37" stroke-width="2" opacity="0.5"/>
+  <path d="M1140,60 Q1110,60 1110,90" fill="none" stroke="#d4af37" stroke-width="2" opacity="0.5"/>
+  <path d="M60,570 Q90,570 90,540" fill="none" stroke="#d4af37" stroke-width="2" opacity="0.5"/>
+  <path d="M1140,570 Q1110,570 1110,540" fill="none" stroke="#d4af37" stroke-width="2" opacity="0.5"/>
+</svg>
