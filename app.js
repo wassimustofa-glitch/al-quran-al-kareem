@@ -5746,6 +5746,206 @@ window.renderVocabularyTracker = renderVocabularyTracker;
 window.renderSurahThemeGroups = renderSurahThemeGroups;
 window.renderSessionHistory = renderSessionHistory;
 window.trackSessionEvent = trackSessionEvent;
+window.navigateTo = navigateTo;
+window.setTheme = applyTheme;
 
 document.addEventListener('DOMContentLoaded', init);
+
+/* ============================================================
+   FIREBASE SERVER CONTROL INTEGRATION
+   ============================================================ */
+(function initServerControl() {
+    if (typeof firebase === 'undefined') return;
+
+    const fbConfig = {
+        apiKey: "AIzaSyCo_Ct7zfmOX3m-10spK3kLreZnBM09GQc",
+        authDomain: "chatapp-81ebf.firebaseapp.com",
+        databaseURL: "https://chatapp-81ebf-default-rtdb.firebaseio.com",
+        projectId: "chatapp-81ebf",
+        storageBucket: "chatapp-81ebf.firebasestorage.app"
+    };
+
+    let fbApp;
+    try {
+        fbApp = firebase.app();
+    } catch (e) {
+        fbApp = firebase.initializeApp(fbConfig);
+    }
+    const db = firebase.database();
+    const adminRef = db.ref('quran-admin');
+
+    // --- Visitor Tracking ---
+    let visitorId = localStorage.getItem('quran-visitor-id');
+    if (!visitorId) {
+        visitorId = 'v_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        localStorage.setItem('quran-visitor-id', visitorId);
+    }
+
+    function getBrowserName() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Edg')) return 'Edge';
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Safari')) return 'Safari';
+        return 'Other';
+    }
+
+    function trackVisitor() {
+        const vRef = db.ref('quran-admin/analytics/visitors/' + visitorId);
+        const data = {
+            lastSeen: Date.now(),
+            page: state.currentPage || 'home',
+            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            browser: getBrowserName(),
+            online: true
+        };
+        vRef.update(data);
+        vRef.child('online').onDisconnect().set(false);
+        vRef.child('lastSeen').onDisconnect().set(firebase.database.ServerValue.TIMESTAMP);
+
+        // Daily visitor count
+        const today = new Date().toISOString().split('T')[0];
+        db.ref('quran-admin/analytics/dailyVisitors/' + today).transaction(c => (c || 0) + 1);
+    }
+
+    // Track page navigations
+    const origNavigateTo = window.navigateTo;
+    if (typeof origNavigateTo === 'function') {
+        window.navigateTo = function(page) {
+            origNavigateTo(page);
+            // Update page in Firebase
+            db.ref('quran-admin/analytics/visitors/' + visitorId + '/page').set(page);
+            db.ref('quran-admin/analytics/visitors/' + visitorId + '/lastSeen').set(Date.now());
+            // Track page views
+            db.ref('quran-admin/analytics/pageViews/' + page).transaction(c => (c || 0) + 1);
+        };
+    }
+
+    // --- Broadcast Listener ---
+    let broadcastDismissed = null;
+
+    adminRef.child('broadcast/current').on('value', snap => {
+        const data = snap.val();
+        const overlay = document.getElementById('serverBroadcastOverlay');
+        if (!overlay) return;
+
+        if (data && data.active && data.timestamp !== broadcastDismissed) {
+            const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', alert: '🚨', emergency: '🔴' };
+            document.getElementById('serverBroadcastIcon').textContent = icons[data.type] || 'ℹ️';
+            document.getElementById('serverBroadcastTitle').textContent = data.title || 'Server Message';
+            document.getElementById('serverBroadcastMsg').textContent = data.message || '';
+            overlay.setAttribute('data-type', data.type || 'info');
+            overlay.style.display = 'flex';
+
+            // Auto-dismiss
+            if (data.duration && data.duration > 0) {
+                setTimeout(() => { overlay.style.display = 'none'; }, data.duration * 1000);
+            }
+        } else {
+            overlay.style.display = 'none';
+        }
+    });
+
+    window.dismissBroadcast = function() {
+        const overlay = document.getElementById('serverBroadcastOverlay');
+        if (overlay) overlay.style.display = 'none';
+        adminRef.child('broadcast/current').once('value').then(s => {
+            if (s.val()) broadcastDismissed = s.val().timestamp;
+        });
+    };
+
+    // --- Announcement Banner Listener ---
+    let announcementDismissedTs = null;
+
+    adminRef.child('announcement').on('value', snap => {
+        const data = snap.val();
+        const banner = document.getElementById('serverAnnouncementBanner');
+        if (!banner) return;
+
+        if (data && data.active && data.text && data.timestamp !== announcementDismissedTs) {
+            document.getElementById('serverAnnouncementText').textContent = data.text;
+            banner.setAttribute('data-type', data.type || 'info');
+            const link = document.getElementById('serverAnnouncementLink');
+            if (data.link) { link.href = data.link; link.style.display = 'inline'; }
+            else { link.style.display = 'none'; }
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    });
+
+    window.dismissAnnouncement = function() {
+        const banner = document.getElementById('serverAnnouncementBanner');
+        if (banner) banner.style.display = 'none';
+        adminRef.child('announcement').once('value').then(s => {
+            if (s.val()) announcementDismissedTs = s.val().timestamp;
+        });
+    };
+
+    // --- Maintenance Mode Listener ---
+    adminRef.child('maintenance').on('value', snap => {
+        const data = snap.val();
+        const screen = document.getElementById('maintenanceScreen');
+        if (!screen) return;
+
+        if (data && data.active) {
+            document.getElementById('maintenanceMsg').textContent = data.message || 'We\'re performing some updates. Please check back shortly!';
+            const eta = document.getElementById('maintenanceEta');
+            eta.textContent = data.estimatedTime ? 'Estimated time: ' + data.estimatedTime : '';
+            screen.style.display = 'flex';
+        } else {
+            screen.style.display = 'none';
+        }
+    });
+
+    // --- Theme Override Listener ---
+    adminRef.child('siteControls/themeOverride').on('value', snap => {
+        const theme = snap.val();
+        if (theme && typeof window.setTheme === 'function') {
+            window.setTheme(theme);
+        }
+    });
+
+    // --- Force Refresh Listener ---
+    let lastRefreshTs = Date.now();
+    adminRef.child('forceRefresh').on('value', snap => {
+        const ts = snap.val();
+        if (ts && ts > lastRefreshTs) {
+            lastRefreshTs = ts;
+            location.reload();
+        }
+    });
+
+    // --- Site Controls Listener ---
+    adminRef.child('siteControls').on('value', snap => {
+        const data = snap.val() || {};
+
+        // Visitor counter widget
+        let widget = document.getElementById('visitorCounterWidget');
+        if (data.showVisitorCount) {
+            if (!widget) {
+                widget = document.createElement('div');
+                widget.id = 'visitorCounterWidget';
+                widget.className = 'visitor-counter-widget';
+                widget.innerHTML = '<span class="vc-dot"></span> <span id="visitorCountNum">0</span> online';
+                document.body.appendChild(widget);
+            }
+            adminRef.child('analytics/visitors').on('value', vs => {
+                const count = Object.values(vs.val() || {}).filter(v => v.online).length;
+                const el = document.getElementById('visitorCountNum');
+                if (el) el.textContent = count;
+            });
+        } else if (widget) {
+            widget.remove();
+        }
+    });
+
+    // --- Init tracking after DOM ready ---
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', trackVisitor);
+    } else {
+        trackVisitor();
+    }
+})();
+
 })();

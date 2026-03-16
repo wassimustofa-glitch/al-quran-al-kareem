@@ -1913,7 +1913,41 @@
     <!-- ==================== PARTICLES BACKGROUND ==================== -->
     <div class="particles-container" id="particlesContainer"></div>
 
+    <!-- ==================== SERVER BROADCAST OVERLAY ==================== -->
+    <div id="serverBroadcastOverlay" class="server-broadcast-overlay" style="display:none;">
+        <div class="server-broadcast-card">
+            <div class="server-broadcast-icon" id="serverBroadcastIcon"></div>
+            <h3 class="server-broadcast-title" id="serverBroadcastTitle"></h3>
+            <p class="server-broadcast-msg" id="serverBroadcastMsg"></p>
+            <button class="server-broadcast-close" id="serverBroadcastClose" onclick="dismissBroadcast()">
+                <i class="fas fa-times"></i> Dismiss
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== ANNOUNCEMENT BANNER ==================== -->
+    <div id="serverAnnouncementBanner" class="server-announcement-banner" style="display:none;">
+        <div class="announcement-content">
+            <i class="fas fa-bullhorn"></i>
+            <span id="serverAnnouncementText"></span>
+            <a id="serverAnnouncementLink" href="#" target="_blank" style="display:none;">Learn more</a>
+        </div>
+        <button class="announcement-close" onclick="dismissAnnouncement()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- ==================== MAINTENANCE SCREEN ==================== -->
+    <div id="maintenanceScreen" class="maintenance-screen" style="display:none;">
+        <div class="maintenance-content">
+            <div class="maintenance-icon">🔧</div>
+            <h1>Under Maintenance</h1>
+            <p id="maintenanceMsg">We're performing some updates. Please check back shortly!</p>
+            <p class="maintenance-time" id="maintenanceEta"></p>
+        </div>
+    </div>
+
     <!-- ==================== SCRIPTS ==================== -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="quran-data.js"></script>
     <script src="app.js"></script>
 </body>
