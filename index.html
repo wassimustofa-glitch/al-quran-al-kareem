@@ -24,6 +24,9 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕌</text></svg>">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕌</text></svg>">
 
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
     <!-- Preconnect & Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,6 +189,10 @@
                     <li class="nav-item" data-page="settings">
                         <i class="fas fa-cog"></i>
                         <span>Settings</span>
+                    </li>
+                    <li class="nav-item" data-page="download">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Download App</span>
                     </li>
                     <li class="nav-item" data-page="about">
                         <i class="fas fa-info-circle"></i>
@@ -894,36 +901,51 @@
                             </button>
                             <span class="location-name" id="locationName">Location not set</span>
                         </div>
+                        <div class="manual-location-form" id="manualLocationForm">
+                            <div class="location-input-row">
+                                <input type="text" id="manualCityInput" placeholder="City (e.g., Dhaka)" class="location-text-input">
+                                <input type="text" id="manualCountryInput" placeholder="Country (e.g., Bangladesh)" class="location-text-input">
+                                <button class="get-location-btn secondary" id="manualLocationBtn">
+                                    <i class="fas fa-search"></i> Find
+                                </button>
+                            </div>
+                        </div>
                         <div class="prayer-times-grid" id="prayerTimesGrid">
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-sun"></i></div>
                                 <h4>Fajr</h4>
                                 <span class="prayer-time" id="fajrTime">--:--</span>
+                                <button class="prayer-alarm-toggle active" data-prayer="Fajr" title="Toggle Fajr alarm"><i class="fas fa-bell"></i></button>
                             </div>
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-sun"></i></div>
                                 <h4>Sunrise</h4>
                                 <span class="prayer-time" id="sunriseTime">--:--</span>
+                                <button class="prayer-alarm-toggle" data-prayer="Sunrise" title="Toggle Sunrise alarm"><i class="fas fa-bell-slash"></i></button>
                             </div>
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-sun"></i></div>
                                 <h4>Dhuhr</h4>
                                 <span class="prayer-time" id="dhuhrTime">--:--</span>
+                                <button class="prayer-alarm-toggle active" data-prayer="Dhuhr" title="Toggle Dhuhr alarm"><i class="fas fa-bell"></i></button>
                             </div>
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-cloud-sun"></i></div>
                                 <h4>Asr</h4>
                                 <span class="prayer-time" id="asrTime">--:--</span>
+                                <button class="prayer-alarm-toggle active" data-prayer="Asr" title="Toggle Asr alarm"><i class="fas fa-bell"></i></button>
                             </div>
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-moon"></i></div>
                                 <h4>Maghrib</h4>
                                 <span class="prayer-time" id="maghribTime">--:--</span>
+                                <button class="prayer-alarm-toggle active" data-prayer="Maghrib" title="Toggle Maghrib alarm"><i class="fas fa-bell"></i></button>
                             </div>
                             <div class="prayer-time-card">
                                 <div class="prayer-icon"><i class="fas fa-moon"></i></div>
                                 <h4>Isha</h4>
                                 <span class="prayer-time" id="ishaTime">--:--</span>
+                                <button class="prayer-alarm-toggle active" data-prayer="Isha" title="Toggle Isha alarm"><i class="fas fa-bell"></i></button>
                             </div>
                         </div>
                         <div class="next-prayer-banner" id="nextPrayerBanner">
@@ -1318,6 +1340,30 @@
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Adhan Sound</label>
+                                    <span>Choose call to prayer audio</span>
+                                </div>
+                                <select id="adhanSoundSelect" class="settings-select">
+                                    <option value="makkah">Makkah (Al-Haram)</option>
+                                    <option value="madinah">Madinah (An-Nabawi)</option>
+                                    <option value="mishary">Mishary Rashid</option>
+                                    <option value="none">Silent (No Sound)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Alert Timing</label>
+                                    <span>When to alert before prayer</span>
+                                </div>
+                                <select id="alarmOffsetSelect" class="settings-select">
+                                    <option value="0">At prayer time</option>
+                                    <option value="5">5 minutes before</option>
+                                    <option value="10">10 minutes before</option>
+                                    <option value="15">15 minutes before</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="settings-group">
@@ -1525,6 +1571,176 @@
                 </section>
 
                 <!-- ==================== ABOUT PAGE ==================== -->
+                <!-- ==================== DOWNLOAD APP PAGE ==================== -->
+                <section class="page-section" id="page-download">
+                    <div class="page-header">
+                        <h2><i class="fas fa-mobile-alt"></i> Download App</h2>
+                    </div>
+                    <div class="download-page">
+                        <!-- Hero Section -->
+                        <div class="download-hero">
+                            <div class="download-hero-glow"></div>
+                            <div class="download-phone-mockup">
+                                <div class="phone-frame">
+                                    <div class="phone-notch"></div>
+                                    <div class="phone-screen">
+                                        <div class="phone-app-preview">
+                                            <div class="preview-header-bar">
+                                                <i class="fas fa-book-quran"></i>
+                                                <span>Al-Quran Al-Kareem</span>
+                                            </div>
+                                            <div class="preview-bismillah">بِسْمِ اللَّهِ</div>
+                                            <div class="preview-ayah-line"></div>
+                                            <div class="preview-ayah-line short"></div>
+                                            <div class="preview-ayah-line"></div>
+                                            <div class="preview-nav-bar">
+                                                <i class="fas fa-home"></i>
+                                                <i class="fas fa-book-open"></i>
+                                                <i class="fas fa-search"></i>
+                                                <i class="fas fa-clock"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="download-hero-text">
+                                <div class="download-badge">
+                                    <i class="fas fa-star"></i> Official App
+                                </div>
+                                <h1 class="download-title">Al-Quran Al-Kareem</h1>
+                                <p class="download-subtitle">The complete Quran experience — now in your pocket</p>
+                                <div class="download-stats-row">
+                                    <div class="download-stat">
+                                        <span class="dl-stat-num">21+</span>
+                                        <span class="dl-stat-label">Features</span>
+                                    </div>
+                                    <div class="download-stat">
+                                        <span class="dl-stat-num">114</span>
+                                        <span class="dl-stat-label">Surahs</span>
+                                    </div>
+                                    <div class="download-stat">
+                                        <span class="dl-stat-num">6</span>
+                                        <span class="dl-stat-label">Themes</span>
+                                    </div>
+                                    <div class="download-stat">
+                                        <span class="dl-stat-num">3</span>
+                                        <span class="dl-stat-label">Languages</span>
+                                    </div>
+                                </div>
+                                <a href="https://github.com/wassimustofa-glitch/al-quran-al-kareem/releases/download/v1.0/com.alquran.alkareem-Signed.apk" class="download-btn-main" download>
+                                    <div class="download-btn-shine"></div>
+                                    <i class="fab fa-android"></i>
+                                    <div class="download-btn-text">
+                                        <span class="download-btn-small">Download for</span>
+                                        <span class="download-btn-big">Android</span>
+                                    </div>
+                                    <i class="fas fa-arrow-down download-arrow-icon"></i>
+                                </a>
+                                <p class="download-size-info"><i class="fas fa-file-archive"></i> 30 MB &bull; Android 8.0+ &bull; v1.0</p>
+                            </div>
+                        </div>
+
+                        <!-- Features Grid -->
+                        <div class="download-features-section">
+                            <h2 class="download-section-title">
+                                <span class="title-gradient">Why Download the App?</span>
+                            </h2>
+                            <div class="download-features-grid">
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #f093fb, #f5576c);">
+                                        <i class="fas fa-bell"></i>
+                                    </div>
+                                    <h3>Azaan Notifications</h3>
+                                    <p>Get prayer time alerts with beautiful adhan sounds — Makkah, Madinah, or Mishary</p>
+                                </div>
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #4facfe, #00f2fe);">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
+                                    <h3>Native Performance</h3>
+                                    <p>Smoother, faster experience with native Android optimizations</p>
+                                </div>
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #43e97b, #38f9d7);">
+                                        <i class="fas fa-volume-up"></i>
+                                    </div>
+                                    <h3>Auto-Play Audio</h3>
+                                    <p>Continuous ayah-by-ayah recitation without interruption</p>
+                                </div>
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #fa709a, #fee140);">
+                                        <i class="fas fa-palette"></i>
+                                    </div>
+                                    <h3>Premium Dark Theme</h3>
+                                    <p>Exclusive ImGui-style gradient theme with golden accents</p>
+                                </div>
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #a18cd1, #fbc2eb);">
+                                        <i class="fas fa-mobile-alt"></i>
+                                    </div>
+                                    <h3>Mobile Optimized</h3>
+                                    <p>Perfectly fitted layout designed specifically for your phone</p>
+                                </div>
+                                <div class="dl-feature-card">
+                                    <div class="dl-feature-icon" style="--icon-gradient: linear-gradient(135deg, #ffecd2, #fcb69f);">
+                                        <i class="fas fa-moon"></i>
+                                    </div>
+                                    <h3>All Website Features</h3>
+                                    <p>Every feature from the website — Quran, prayer times, tasbih, duas & more</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- How to Install -->
+                        <div class="download-install-section">
+                            <h2 class="download-section-title">
+                                <span class="title-gradient">How to Install</span>
+                            </h2>
+                            <div class="install-steps">
+                                <div class="install-step">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <h4>Download APK</h4>
+                                        <p>Tap the download button above</p>
+                                    </div>
+                                </div>
+                                <div class="install-step-connector"></div>
+                                <div class="install-step">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <h4>Allow Install</h4>
+                                        <p>Enable "Install from unknown sources" when prompted</p>
+                                    </div>
+                                </div>
+                                <div class="install-step-connector"></div>
+                                <div class="install-step">
+                                    <div class="step-number">3</div>
+                                    <div class="step-content">
+                                        <h4>Open & Enjoy</h4>
+                                        <p>Launch the app and start your Quran journey</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom CTA -->
+                        <div class="download-bottom-cta">
+                            <div class="cta-glow"></div>
+                            <h2>Ready to begin?</h2>
+                            <p>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+                            <a href="https://github.com/wassimustofa-glitch/al-quran-al-kareem/releases/download/v1.0/com.alquran.alkareem-Signed.apk" class="download-btn-main bottom-cta-btn" download>
+                                <div class="download-btn-shine"></div>
+                                <i class="fab fa-android"></i>
+                                <div class="download-btn-text">
+                                    <span class="download-btn-small">Download for</span>
+                                    <span class="download-btn-big">Android</span>
+                                </div>
+                                <i class="fas fa-arrow-down download-arrow-icon"></i>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="page-section" id="page-about">
                     <div class="page-header">
                         <h2><i class="fas fa-info-circle"></i> About</h2>
@@ -1950,5 +2166,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="quran-data.js"></script>
     <script src="app.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch(err => console.log('SW failed:', err));
+    }
+    </script>
 </body>
 </html>
