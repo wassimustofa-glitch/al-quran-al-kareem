@@ -57,7 +57,13 @@ const state = {
   planStreak: 0,
   contextMenuTarget: null,
   notifications: [],
-  notificationPrefs: { dailyReminder: true, achievements: true, prayerTimes: false }
+  notificationPrefs: {
+    dailyReminder: true, achievements: true, prayerTimes: false,
+    prayerAlarms: { Fajr: true, Sunrise: false, Dhuhr: true, Asr: true, Maghrib: true, Isha: true },
+    adhanSound: 'makkah',
+    alarmMinutesBefore: 0,
+    alarmVibrate: true
+  }
 };
 
 const $ = (s) => document.querySelector(s);
@@ -131,7 +137,10 @@ function loadState() {
     if (s.dailyPlanProgress) state.dailyPlanProgress = s.dailyPlanProgress;
     if (s.planStreak) state.planStreak = s.planStreak;
     if (s.notifications) state.notifications = s.notifications;
-    if (s.notificationPrefs) state.notificationPrefs = s.notificationPrefs;
+    if (s.notificationPrefs) {
+      Object.assign(state.notificationPrefs, s.notificationPrefs);
+      if (s.notificationPrefs.prayerAlarms) Object.assign(state.notificationPrefs.prayerAlarms, s.notificationPrefs.prayerAlarms);
+    }
   } catch(e) {}
 }
 
@@ -244,7 +253,8 @@ function navigateTo(page) {
     statistics:'Statistics', settings:'Settings', about:'About',
     'asma-ul-husna':'Asma ul Husna', tafsir:'Tafsir & Study',
     prophets:'Prophets of Islam', achievements:'Achievements',
-    collections:'My Collections', 'advanced-search':'Advanced Search'
+    collections:'My Collections', 'advanced-search':'Advanced Search',
+    download:'Download App'
   };
   $('#headerTitle h1').textContent = titles[page]||'Al-Quran Al-Kareem';
   if (window.innerWidth<=1024) closeSidebar();
@@ -737,6 +747,36 @@ function renderReadingPlan() {
    ============================================================ */
 function initPrayerTimes() {
   $('#getLocationBtn').addEventListener('click',fetchPrayerTimes);
+  // Manual location
+  $('#manualLocationBtn').addEventListener('click', async () => {
+    const city = $('#manualCityInput').value.trim();
+    const country = $('#manualCountryInput').value.trim();
+    if (!city) { showToast('Enter a city name', 'warning'); return; }
+    showToast('Looking up location...', 'info');
+    const d = new Date();
+    const data = await fetchAPI(PRAYER_API + '/timingsByCity/' + d.getDate() + '-' + (d.getMonth()+1) + '-' + d.getFullYear() + '?city=' + encodeURIComponent(city) + '&country=' + encodeURIComponent(country || '') + '&method=2');
+    if (!data || data.code !== 200) { showToast('City not found. Try another name.', 'error'); return; }
+    state.location = { lat: data.data.meta.latitude, lng: data.data.meta.longitude, cityName: city + (country ? ', ' + country : '') };
+    saveState();
+    displayPrayerTimings(data.data.timings, state.location.cityName || data.data.meta.timezone);
+    showToast('Prayer times loaded for ' + city, 'success');
+  });
+  // Alarm toggles
+  $$('.prayer-alarm-toggle').forEach(btn => {
+    const prayer = btn.dataset.prayer;
+    const isOn = state.notificationPrefs.prayerAlarms[prayer];
+    btn.classList.toggle('active', isOn);
+    btn.querySelector('i').className = isOn ? 'fas fa-bell' : 'fas fa-bell-slash';
+    btn.addEventListener('click', () => {
+      state.notificationPrefs.prayerAlarms[prayer] = !state.notificationPrefs.prayerAlarms[prayer];
+      const on = state.notificationPrefs.prayerAlarms[prayer];
+      btn.classList.toggle('active', on);
+      btn.querySelector('i').className = on ? 'fas fa-bell' : 'fas fa-bell-slash';
+      saveState();
+      showToast(prayer + ' alarm ' + (on ? 'enabled' : 'disabled'), 'info');
+      if (state.notificationPrefs.prayerTimes) initPrayerAlarms();
+    });
+  });
   if(state.location) fetchPrayerTimesForLocation(state.location.lat,state.location.lng);
 }
 
@@ -752,12 +792,21 @@ function fetchPrayerTimes() {
 async function fetchPrayerTimesForLocation(lat,lng) {
   const d=new Date(), data=await fetchAPI(PRAYER_API+'/timings/'+d.getDate()+'-'+(d.getMonth()+1)+'-'+d.getFullYear()+'?latitude='+lat+'&longitude='+lng+'&method=2');
   if(!data||data.code!==200){showToast('Failed to fetch prayer times','error');return;}
-  const t=data.data.timings;
+  const label = (state.location && state.location.cityName) || data.data.meta.timezone || 'Detected';
+  displayPrayerTimings(data.data.timings, label);
+}
+
+function displayPrayerTimings(t, locationLabel) {
   $('#fajrTime').textContent=t.Fajr; $('#sunriseTime').textContent=t.Sunrise;
   $('#dhuhrTime').textContent=t.Dhuhr; $('#asrTime').textContent=t.Asr;
   $('#maghribTime').textContent=t.Maghrib; $('#ishaTime').textContent=t.Isha;
-  $('#locationName').textContent=data.data.meta.timezone||'Detected';
-  updatePrayerCountdown(t); setInterval(()=>updatePrayerCountdown(t),1000);
+  $('#locationName').textContent=locationLabel;
+  if (window._prayerCountdownInterval) clearInterval(window._prayerCountdownInterval);
+  updatePrayerCountdown(t);
+  window._prayerCountdownInterval = setInterval(()=>updatePrayerCountdown(t),1000);
+  // Store current timings for alarm scheduling
+  state._currentTimings = t;
+  if (state.notificationPrefs.prayerTimes) initPrayerAlarms();
 }
 
 function updatePrayerCountdown(t) {
@@ -768,6 +817,106 @@ function updatePrayerCountdown(t) {
   const diff=Math.max(0,Math.floor((nextTime-now)/1000));
   $('#nextPrayerName').textContent=next;
   $('#nextPrayerCountdown').textContent=Math.floor(diff/3600)+':'+Math.floor(diff%3600/60).toString().padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
+}
+
+/* ============================================================
+   PRAYER ALARMS
+   ============================================================ */
+let prayerAlarmTimers = [];
+let adhanAudio = null;
+
+function initPrayerAlarms() {
+  clearPrayerAlarms();
+  if (!state.notificationPrefs.prayerTimes || !state.location) return;
+  const t = state._currentTimings;
+  if (t) { scheduleWebPrayerAlarms(t); return; }
+  // Fetch if no cached timings
+  fetchPrayerTimesForAlarms();
+}
+
+async function fetchPrayerTimesForAlarms() {
+  const d = new Date();
+  const data = await fetchAPI(PRAYER_API + '/timings/' + d.getDate() + '-' + (d.getMonth()+1) + '-' + d.getFullYear() + '?latitude=' + state.location.lat + '&longitude=' + state.location.lng + '&method=2');
+  if (!data || data.code !== 200) return;
+  scheduleWebPrayerAlarms(data.data.timings);
+}
+
+function scheduleWebPrayerAlarms(t) {
+  clearPrayerAlarms();
+  const prayers = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const now = new Date();
+  const offset = (state.notificationPrefs.alarmMinutesBefore || 0) * 60000;
+
+  prayers.forEach(prayer => {
+    if (!state.notificationPrefs.prayerAlarms[prayer]) return;
+    const [h, m] = t[prayer].split(':').map(Number);
+    const prayerDate = new Date(now);
+    prayerDate.setHours(h, m, 0, 0);
+    const delay = prayerDate.getTime() - offset - now.getTime();
+    if (delay > 0) {
+      prayerAlarmTimers.push(setTimeout(() => triggerPrayerAlarm(prayer, t[prayer]), delay));
+    }
+  });
+
+  // Re-schedule at midnight for next day
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 5, 0);
+  prayerAlarmTimers.push(setTimeout(() => {
+    state._currentTimings = null;
+    if (state.location) fetchPrayerTimesForLocation(state.location.lat, state.location.lng);
+  }, midnight - now));
+}
+
+function triggerPrayerAlarm(prayerName, timeStr) {
+  // In-app notification
+  addNotification("It's time for " + prayerName + ' (' + timeStr + ')', 'prayer', 'fa-mosque');
+  showToast("It's time for " + prayerName + ' prayer!', 'success', 10000);
+
+  // Play adhan
+  if (state.notificationPrefs.adhanSound !== 'none') {
+    playAdhanSound(state.notificationPrefs.adhanSound);
+  }
+
+  // Browser notification
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Prayer Time: ' + prayerName, {
+      body: "It's time for " + prayerName + ' prayer (' + timeStr + ')',
+      icon: 'icons/icon-192.png',
+      tag: 'prayer-' + prayerName,
+      requireInteraction: true
+    });
+  }
+
+  // Vibrate
+  if (state.notificationPrefs.alarmVibrate && navigator.vibrate) {
+    navigator.vibrate([200, 100, 200, 100, 200]);
+  }
+}
+
+function clearPrayerAlarms() {
+  prayerAlarmTimers.forEach(t => clearTimeout(t));
+  prayerAlarmTimers = [];
+}
+
+function playAdhanSound(variant) {
+  stopAdhan();
+  const files = { makkah: 'audio/adhan-makkah.mp3', madinah: 'audio/adhan-madinah.mp3', mishary: 'audio/adhan-mishary.mp3' };
+  const src = files[variant] || files.makkah;
+  adhanAudio = new Audio(src);
+  adhanAudio.volume = state.audio.muted ? 0 : (state.audio.volume || 0.8);
+  adhanAudio.play().catch(() => {});
+}
+
+function stopAdhan() {
+  if (adhanAudio) { adhanAudio.pause(); adhanAudio.currentTime = 0; adhanAudio = null; }
+}
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') showToast('Notifications enabled!', 'success');
+    });
+  }
 }
 
 /* ============================================================
@@ -914,6 +1063,24 @@ function initSettings() {
     r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(d.bookmarks)state.bookmarks=d.bookmarks;if(d.notes)state.notes=d.notes;if(d.statistics)Object.assign(state.statistics,d.statistics);if(d.settings)Object.assign(state.settings,d.settings);if(d.collections)state.collections=d.collections;if(d.achievements)state.achievements=d.achievements;saveState();applySettings();showToast('Imported!','success');}catch{showToast('Invalid file','error');}};
     r.readAsText(f);
   });
+  // Notification toggles
+  $('#dailyReminderToggle').checked = state.notificationPrefs.dailyReminder;
+  $('#dailyReminderToggle').addEventListener('change', e => { state.notificationPrefs.dailyReminder = e.target.checked; saveState(); });
+  $('#prayerAlertToggle').checked = state.notificationPrefs.prayerTimes;
+  $('#prayerAlertToggle').addEventListener('change', e => {
+    state.notificationPrefs.prayerTimes = e.target.checked; saveState();
+    if (e.target.checked) { requestNotificationPermission(); initPrayerAlarms(); }
+    else clearPrayerAlarms();
+  });
+  // Adhan settings
+  if ($('#adhanSoundSelect')) {
+    $('#adhanSoundSelect').value = state.notificationPrefs.adhanSound;
+    $('#adhanSoundSelect').addEventListener('change', e => { state.notificationPrefs.adhanSound = e.target.value; saveState(); });
+  }
+  if ($('#alarmOffsetSelect')) {
+    $('#alarmOffsetSelect').value = state.notificationPrefs.alarmMinutesBefore;
+    $('#alarmOffsetSelect').addEventListener('change', e => { state.notificationPrefs.alarmMinutesBefore = +e.target.value; saveState(); if (state.notificationPrefs.prayerTimes) initPrayerAlarms(); });
+  }
   $('#clearCacheBtn').addEventListener('click',()=>{state.cache={};showToast('Cache cleared','success');});
   $('#resetAllBtn').addEventListener('click',()=>{if(confirm('Reset all settings?')){localStorage.removeItem('quranApp');location.reload();}});
 }
@@ -2468,44 +2635,8 @@ function showWordPopup(word, el) {
 const ONBOARDING_STEPS = [
   {
     title: 'Assalamu Alaikum!',
-    description: 'Welcome to Al-Quran Al-Kareem, your comprehensive Quran companion app. Let us give you a quick tour of the features.',
+    description: 'Welcome to Al-Quran Al-Kareem — your complete Quran companion with recitations, prayer times, azaan alarms, tafsir, and 20+ features.',
     icon: 'fa-quran',
-    image: null
-  },
-  {
-    title: 'Read the Quran',
-    description: 'Access all 114 surahs with Arabic text, English translation, and Bangla translation. Navigate easily between surahs and ayahs.',
-    icon: 'fa-book-open',
-    image: null
-  },
-  {
-    title: 'Listen & Learn',
-    description: 'Listen to beautiful recitations from world-renowned reciters. Adjust playback speed and follow along with highlighted ayahs.',
-    icon: 'fa-headphones',
-    image: null
-  },
-  {
-    title: 'Bookmark & Notes',
-    description: 'Save your favorite verses, add personal notes, and organize them into collections for easy access later.',
-    icon: 'fa-heart',
-    image: null
-  },
-  {
-    title: 'Study & Explore',
-    description: 'Explore tafsir topics, learn the 99 Names of Allah, read stories of the prophets, and deepen your understanding.',
-    icon: 'fa-graduation-cap',
-    image: null
-  },
-  {
-    title: 'Track Your Progress',
-    description: 'Set reading plans, track your streaks, earn achievements, and view detailed statistics of your Quran journey.',
-    icon: 'fa-chart-line',
-    image: null
-  },
-  {
-    title: 'Customize Your Experience',
-    description: 'Choose from multiple themes, adjust font sizes, select your preferred reciters, and personalize every aspect of the app.',
-    icon: 'fa-palette',
     image: null
   },
   {
