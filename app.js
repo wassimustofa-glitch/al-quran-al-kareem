@@ -1,5 +1,5 @@
 /* ============================================================
-   AL-QURAN AL-KAREEM - Complete Web Application
+   MYQURAN - Complete Web Application
    Version: 3.0.0 | Author: Wassi
    ============================================================ */
 
@@ -246,7 +246,7 @@ function navigateTo(page) {
   $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page===page));
 
   const titles = {
-    home:'Al-Quran Al-Kareem', quran:'Read Quran', 'surah-index':'Surah Index',
+    home:'MyQuran', quran:'Read Quran', 'surah-index':'Surah Index',
     'juz-index':'Juz Index', search:'Search Quran', bookmarks:'Bookmarks', notes:'My Notes',
     'reading-plan':'Reading Plan', 'prayer-times':'Prayer Times', qibla:'Qibla Direction',
     tasbih:'Digital Tasbih', dua:'Daily Duas', calendar:'Islamic Calendar',
@@ -256,7 +256,7 @@ function navigateTo(page) {
     collections:'My Collections', 'advanced-search':'Advanced Search',
     download:'Download App'
   };
-  $('#headerTitle h1').textContent = titles[page]||'Al-Quran Al-Kareem';
+  $('#headerTitle h1').textContent = titles[page]||'MyQuran';
   if (window.innerWidth<=1024) closeSidebar();
   window.scrollTo({top:0,behavior:'smooth'});
   saveState();
@@ -2519,7 +2519,7 @@ function shareCollection(colIdx) {
   col.items.forEach((item, i) => {
     text += (i + 1) + '. ' + item.surahName + ' ' + item.surah + ':' + item.ayah + '\n';
   });
-  text += '\n-- Shared from Al-Quran Al-Kareem App';
+  text += '\n-- Shared from MyQuran App';
   navigator.clipboard.writeText(text).then(() => showToast('Collection copied to clipboard!', 'success'));
 }
 
@@ -2635,7 +2635,7 @@ function showWordPopup(word, el) {
 const ONBOARDING_STEPS = [
   {
     title: 'Assalamu Alaikum!',
-    description: 'Welcome to Al-Quran Al-Kareem — your complete Quran companion with recitations, prayer times, azaan alarms, tafsir, and 20+ features.',
+    description: 'Welcome to MyQuran — your complete Quran companion with recitations, prayer times, azaan alarms, tafsir, and 20+ features.',
     icon: 'fa-quran',
     image: null
   },
@@ -3421,7 +3421,7 @@ function loadNotifications() {
   if (!list) return;
 
   if (!state.notifications.length) {
-    addNotification('Welcome to Al-Quran Al-Kareem!', 'welcome', 'fa-star');
+    addNotification('Welcome to MyQuran!', 'welcome', 'fa-star');
     return;
   }
 
@@ -3820,7 +3820,7 @@ function generateShareCard(arabic, translation, reference) {
     + '<div class="share-card-divider"></div>'
     + '<div class="share-card-translation">' + translation + '</div>'
     + '<div class="share-card-ref">' + reference + '</div>'
-    + '<div class="share-card-footer">Al-Quran Al-Kareem</div>'
+    + '<div class="share-card-footer">MyQuran</div>'
     + '</div>'
     + '</div>'
     + '<div class="share-card-styles">'
@@ -3997,7 +3997,7 @@ function renderAboutPage() {
   return '<div class="about-container">'
     + '<div class="about-hero">'
     + '<div class="about-icon"><i class="fas fa-quran"></i></div>'
-    + '<h2>Al-Quran Al-Kareem</h2>'
+    + '<h2>MyQuran</h2>'
     + '<p class="about-version">Version 3.0.0</p>'
     + '<p class="about-tagline">Your Complete Quran Companion</p>'
     + '</div>'
